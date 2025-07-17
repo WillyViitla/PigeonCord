@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PigeonCord - Coo coo, mothercluckers!</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=gg+sans:wght@400;500;600;700&display=swap');
+        
+        * {
+            font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
+            min-height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .login-container {
+            background: #1e1e1e;
+            border-radius: 8px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+            border: 2px solid #333;
+            position: relative;
+        }
+        
+        .input-field {
+            background: #0d0d0d;
+            border: 2px solid #333;
+            border-radius: 3px;
+            color: #e0e0e0;
+            font-size: 16px;
+            padding: 10px;
+            transition: border-color 0.17s ease;
+        }
+        
+        .input-field:focus {
+            border-color: #ff6b35;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.2);
+        }
+        
+        .input-field::placeholder {
+            color: #666;
+        }
+        
+        .pigeon-button {
+            background: linear-gradient(45deg, #ff6b35, #ff8c42);
+            border: none;
+            border-radius: 3px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            padding: 12px 16px;
+            transition: all 0.17s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .pigeon-button:hover {
+            background: linear-gradient(45deg, #e55a2b, #e57a35);
+            transform: translateY(-1px);
+        }
+        
+        .pigeon-button:active {
+            background: linear-gradient(45deg, #cc4d24, #cc6b2e);
+            transform: translateY(0);
+        }
+        
+        .pigeon-button:disabled {
+            background: #444;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .link-button {
+            background: none;
+            border: none;
+            color: #ff6b35;
+            cursor: pointer;
+            font-size: 14px;
+            text-decoration: none;
+            transition: color 0.17s ease;
+        }
+        
+        .link-button:hover {
+            color: #ff8c42;
+            text-decoration: underline;
+        }
+        
+        .error-message {
+            color: #ff4444;
+            font-size: 14px;
+            margin-top: 8px;
+        }
+        
+        .form-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #e0e0e0;
+            line-height: 30px;
+        }
+        
+        .form-subtitle {
+            color: #888;
+            font-size: 16px;
+            line-height: 20px;
+            margin-top: 8px;
+        }
+        
+        .form-label {
+            color: #999;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+            margin-bottom: 8px;
+        }
+        
+        .register-prompt {
+            color: #888;
+            font-size: 14px;
+            margin-top: 20px;
+        }
+        
+        .spinner {
+            border: 2px solid transparent;
+            border-top: 2px solid #ffffff;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-left: 8px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .pigeon-svg {
+            width: 24px;
+            height: 24px;
+            fill: #ff6b35;
+            display: inline-block;
+        }
+        
+        .flying-pigeon {
+            position: fixed;
+            z-index: 1000;
+            animation: fly 4s linear infinite;
+            pointer-events: none;
+        }
+        
+        @keyframes fly {
+            0% { 
+                transform: translateX(-100px) translateY(0px) rotate(0deg);
+                opacity: 0;
+            }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { 
+                transform: translateX(calc(100vw + 100px)) translateY(-50px) rotate(360deg);
+                opacity: 0;
+            }
+        }
+        
+        .perched-pigeon {
+            position: absolute;
+            z-index: 1001;
+            animation: bob 2s ease-in-out infinite;
+        }
+        
+        @keyframes bob {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-5px); }
+        }
+        
+        .pigeon-poop {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: #654321;
+            border-radius: 50%;
+            z-index: 999;
+            animation: poop-drop 2s ease-in;
+        }
+        
+        @keyframes poop-drop {
+            0% { transform: translateY(-20px); opacity: 0; }
+            100% { transform: translateY(0px); opacity: 1; }
+        }
+        
+        .shake {
+            animation: shake 0.5s;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        
+        .pigeon-crown {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            width: 20px;
+            height: 20px;
+            background: #ffd700;
+            border-radius: 50%;
+            animation: crown-glow 2s ease-in-out infinite;
+        }
+        
+        .pigeon-crown::before {
+            content: '';
+            position: absolute;
+            top: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-bottom: 8px solid #ffd700;
+        }
+        
+        @keyframes crown-glow {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+        
+        .background-pigeon {
+            position: fixed;
+            font-size: 120px;
+            color: rgba(255, 107, 53, 0.05);
+            z-index: -1;
+            animation: gentle-float 6s ease-in-out infinite;
+        }
+        
+        @keyframes gentle-float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-30px) rotate(5deg); }
+        }
+        
+        .pigeon-feathers {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -2;
+        }
+        
+        .feather {
+            position: absolute;
+            width: 8px;
+            height: 20px;
+            background: linear-gradient(45deg, #ff6b35, #ff8c42);
+            border-radius: 50% 10% 50% 10%;
+            animation: feather-fall 8s linear infinite;
+            opacity: 0.3;
+        }
+        
+        @keyframes feather-fall {
+            0% { 
+                transform: translateY(-100vh) rotate(0deg);
+                opacity: 0;
+            }
+            10% { opacity: 0.3; }
+            90% { opacity: 0.3; }
+            100% { 
+                transform: translateY(100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+        
+        .coo-sound {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 107, 53, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            z-index: 1000;
+            animation: coo-bounce 0.5s ease-out;
+        }
+        
+        @keyframes coo-bounce {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        .title-pigeon {
+            display: inline-block;
+            animation: title-wobble 3s ease-in-out infinite;
+        }
+        
+        @keyframes title-wobble {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(-2deg); }
+            75% { transform: rotate(2deg); }
+        }
+        
+        .pigeon-silhouette {
+            width: 40px;
+            height: 40px;
+            background: #ff6b35;
+            clip-path: polygon(20% 0%, 80% 0%, 100% 30%, 85% 70%, 70% 100%, 30% 100%, 15% 70%, 0% 30%);
+            animation: gentle-float 3s ease-in-out infinite;
+        }
+        
+        .large-pigeon-bg {
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 107, 53, 0.05);
+            clip-path: polygon(20% 0%, 80% 0%, 100% 30%, 85% 70%, 70% 100%, 30% 100%, 15% 70%, 0% 30%);
+        }
+        
+        .breadcrumb {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #8B4513;
+            border-radius: 50%;
+            animation: breadcrumb-bounce 2s ease-in-out infinite;
+        }
+        
+        @keyframes breadcrumb-bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+    <!-- Background pigeon silhouettes -->
+    <div class="background-pigeon" style="top: 10%; left: 10%;">
+        <div class="large-pigeon-bg"></div>
+    </div>
+    <div class="background-pigeon" style="top: 20%; right: 15%; animation-delay: 2s;">
+        <div class="large-pigeon-bg"></div>
+    </div>
+    <div class="background-pigeon" style="bottom: 15%; left: 20%; animation-delay: 4s;">
+        <div class="large-pigeon-bg"></div>
+    </div>
+    
+    <!-- Falling feathers -->
+    <div class="pigeon-feathers">
+        <div class="feather" style="left: 10%; animation-delay: 0s;"></div>
+        <div class="feather" style="left: 25%; animation-delay: 2s;"></div>
+        <div class="feather" style="left: 40%; animation-delay: 4s;"></div>
+        <div class="feather" style="left: 60%; animation-delay: 1s;"></div>
+        <div class="feather" style="left: 80%; animation-delay: 3s;"></div>
+    </div>
+    
+    <!-- Breadcrumbs scattered around -->
+    <div class="breadcrumb" style="top: 15%; left: 30%; animation-delay: 0s;"></div>
+    <div class="breadcrumb" style="top: 25%; right: 25%; animation-delay: 1s;"></div>
+    <div class="breadcrumb" style="bottom: 20%; left: 15%; animation-delay: 2s;"></div>
+    <div class="breadcrumb" style="bottom: 30%; right: 35%; animation-delay: 3s;"></div>
+    
+    <div class="login-container p-8 w-full max-w-md">
+        <!-- Perched pigeon silhouettes on container -->
+        <div class="perched-pigeon" style="top: -20px; left: 20px;">
+            <div class="pigeon-silhouette" style="width: 24px; height: 24px;"></div>
+        </div>
+        <div class="perched-pigeon" style="top: -20px; right: 20px; animation-delay: 1s;">
+            <div class="pigeon-silhouette" style="width: 24px; height: 24px;"></div>
+        </div>
+        <div class="pigeon-crown"></div>
+        <div class="mb-4">
+                <img src="logo.png" alt="PigeonCord Logo" class="mx-auto w-16 h-16 mb-2 rounded-full shadow-lg border-2 border-orange-500" onerror="this.style.display='none'">
+            </div>
+        <div class="text-center mb-8">
+            <h1 class="form-title" id="formTitle">
+                Welcome to <span class="title-pigeon">PigeonCord</span>!
+            </h1>
+            <p class="form-subtitle" id="formSubtitle">Coo coo! Ready to join the flock, bestie?</p>
+        </div>
+        
+        <form id="loginForm">
+            <div class="mb-4">
+                <label class="form-label block" for="username">Username (no cap fr fr) *</label>
+                <input 
+                    type="text" 
+                    id="username" 
+                    class="input-field w-full"
+                    placeholder="xXPigeon_Lord_2024Xx"
+                    required
+                >
+                <div id="usernameError" class="error-message hidden"></div>
+            </div>
+            
+            <div class="mb-4">
+                <label class="form-label block" for="password">Password (make it bussin) *</label>
+                <input 
+                    type="password" 
+                    id="password" 
+                    class="input-field w-full"
+                    placeholder="coocoopassword123"
+                    required
+                >
+                <div id="passwordError" class="error-message hidden"></div>
+            </div>
+            
+            <button type="submit" class="pigeon-button w-full" id="loginButton">
+                <span id="buttonText">Send It To The Nest 🔥</span>
+                <span id="loadingSpinner" class="spinner hidden"></span>
+            </button>
+            
+            <div class="register-prompt text-center">
+                <span>Not in the flock yet? </span>
+                <button type="button" class="link-button" onclick="switchToRegister()">Join us, bestie!</button>
+            </div>
+        </form>
+        
+        <form id="registerForm" class="hidden">
+            <div class="mb-4">
+                <label class="form-label block" for="regUsername">Username (make it slap) *</label>
+                <input 
+                    type="text" 
+                    id="regUsername" 
+                    class="input-field w-full"
+                    placeholder="PigeonGod69420"
+                    required
+                >
+            </div>
+            
+            <div class="mb-4">
+                <label class="form-label block" for="regPassword">Password (absolutely based) *</label>
+                <input 
+                    type="password" 
+                    id="regPassword" 
+                    class="input-field w-full"
+                    placeholder="supersecretcoo"
+                    required
+                >
+            </div>
+            
+            <div class="mb-4">
+                <label class="form-label block" for="regDateOfBirth">When you were born (sus) *</label>
+                <input 
+                    type="date" 
+                    id="regDateOfBirth" 
+                    class="input-field w-full"
+                    required
+                >
+            </div>
+            
+            <button type="submit" class="pigeon-button w-full" id="registerButton">
+                <span id="regButtonText">Join The Sigma Flock 💀</span>
+                <span id="regLoadingSpinner" class="spinner hidden"></span>
+            </button>
+            
+            <div class="register-prompt text-center">
+                <button type="button" class="link-button" onclick="switchToLogin()">Already based? Get in here!</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        let isLogin = true;
+        let pigeonCount = 0;
+        
+        const pigeonSounds = [
+            "COO COO MOTHERFUCKER!",
+            "COOOOO BESTIE!",
+            "Coo coo, no cap!",
+            "*flaps wings aggressively*",
+            "PIGEON SUPREMACY!",
+            "*pecks at your crumbs*",
+            "Coo? COO COO BITCH!",
+            "*preens feathers like a chad*",
+            "SLAY QUEEN PIGEON!",
+            "That's bussin, coo coo!",
+            "Fr fr, this shit slaps!",
+            "Touch grass? Nah, touch seeds!"
+        ];
+        
+        const pigeonMessages = [
+            "Bruh, that password is mid as fuck!",
+            "Access denied, you absolute muppet!",
+            "Coo coo! Wrong again, dumbass!",
+            "The nest said 'hell nah' to your credentials!",
+            "Connection lost, skill issue tbh",
+            "Authentication failed! Did you forget your damn password?",
+            "Error 404: Brain cells not found!",
+            "That's not it chief, try again!",
+            "Nah fam, that ain't it!",
+            "Username or password is dogwater!",
+            "Bruh moment detected, login failed!",
+            "Imagine failing to login, couldn't be me!"
+        ];
+        
+        function createPigeonSilhouette() {
+            const pigeon = document.createElement('div');
+            pigeon.style.width = '32px';
+            pigeon.style.height = '32px';
+            pigeon.style.background = '#ff6b35';
+            pigeon.style.clipPath = 'polygon(20% 0%, 80% 0%, 100% 30%, 85% 70%, 70% 100%, 30% 100%, 15% 70%, 0% 30%)';
+            return pigeon;
+        }
+        
+        function spawnFlyingPigeon() {
+            const pigeon = document.createElement('div');
+            pigeon.className = 'flying-pigeon';
+            pigeon.style.top = Math.random() * (window.innerHeight - 100) + 'px';
+            pigeon.appendChild(createPigeonSilhouette());
+            document.body.appendChild(pigeon);
+            
+            setTimeout(() => {
+                pigeon.remove();
+            }, 4000);
+        }
+        
+        function showCooSound() {
+            const sound = document.createElement('div');
+            sound.className = 'coo-sound';
+            sound.textContent = pigeonSounds[Math.floor(Math.random() * pigeonSounds.length)];
+            document.body.appendChild(sound);
+            
+            setTimeout(() => {
+                sound.remove();
+            }, 2000);
+        }
+        
+        function switchToRegister() {
+            isLogin = false;
+            document.getElementById('loginForm').classList.add('hidden');
+            document.getElementById('registerForm').classList.remove('hidden');
+            document.getElementById('formTitle').innerHTML = 'Join The Sigma Flock!';
+            document.getElementById('formSubtitle').textContent = 'Time to get absolutely based and coo with the homies!';
+            spawnFlyingPigeon();
+            showCooSound();
+        }
+        
+        function switchToLogin() {
+            isLogin = true;
+            document.getElementById('registerForm').classList.add('hidden');
+            document.getElementById('loginForm').classList.remove('hidden');
+            document.getElementById('formTitle').innerHTML = 'Welcome to <span class="title-pigeon">PigeonCord</span>!';
+            document.getElementById('formSubtitle').textContent = 'Coo coo! Ready to join the flock, bestie?';
+        }
+        
+        function setLoading(formType, loading) {
+            const button = document.getElementById(formType + 'Button');
+            const text = document.getElementById(formType === 'login' ? 'buttonText' : 'regButtonText');
+            const spinner = document.getElementById(formType === 'login' ? 'loadingSpinner' : 'regLoadingSpinner');
+            
+            if (loading) {
+                button.disabled = true;
+                text.textContent = 'Sending it to the nest...';
+                spinner.classList.remove('hidden');
+            } else {
+                button.disabled = false;
+                text.textContent = formType === 'login' ? 'Send It To The Nest 🔥' : 'Join The Sigma Flock 💀';
+                spinner.classList.add('hidden');
+            }
+        }
+        
+        function showError(message) {
+            const container = document.querySelector('.login-container');
+            container.classList.add('shake');
+            setTimeout(() => container.classList.remove('shake'), 500);
+            
+            const randomMsg = pigeonMessages[Math.floor(Math.random() * pigeonMessages.length)];
+            alert(randomMsg);
+            spawnFlyingPigeon();
+            showCooSound();
+        }
+        
+        function addPigeonPoop() {
+            const poop = document.createElement('div');
+            poop.className = 'pigeon-poop';
+            poop.style.left = Math.random() * 90 + '%';
+            poop.style.top = Math.random() * 90 + '%';
+            document.querySelector('.login-container').appendChild(poop);
+            
+            setTimeout(() => {
+                poop.remove();
+            }, 5000);
+        }
+        
+        function addBreadcrumb() {
+            const breadcrumb = document.createElement('div');
+            breadcrumb.className = 'breadcrumb';
+            breadcrumb.style.left = Math.random() * 100 + '%';
+            breadcrumb.style.top = Math.random() * 100 + '%';
+            document.body.appendChild(breadcrumb);
+            
+            setTimeout(() => {
+                breadcrumb.remove();
+            }, 8000);
+        }
+        
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            
+            if (!username || !password) {
+                showError('Please fill in all fields');
+                return;
+            }
+            
+            setLoading('login', true);
+            spawnFlyingPigeon();
+            
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                setLoading('login', false);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        // Success - redirect to chat
+                        window.location.href = '/chat';
+                        return;
+                    } else {
+                        showError(data.error || 'Login failed');
+                        addPigeonPoop();
+                    }
+                } else {
+                    // Handle non-200 responses
+                    let errorMessage = 'Login failed';
+                    try {
+                        const errorData = await response.json();
+                        errorMessage = errorData.error || errorMessage;
+                    } catch (e) {
+                        // If JSON parsing fails, use default message
+                        errorMessage = `Server error (${response.status})`;
+                    }
+                    showError(errorMessage);
+                    addPigeonPoop();
+                }
+            } catch (error) {
+                setLoading('login', false);
+                console.error('Login error:', error);
+                showError('Connection error. Please try again.');
+                addPigeonPoop();
+            }
+        });
+
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('regUsername').value.trim();
+            const password = document.getElementById('regPassword').value;
+            const dateOfBirth = document.getElementById('regDateOfBirth').value;
+            
+            if (!username || !password || !dateOfBirth) {
+                showError('Please fill in all fields');
+                return;
+            }
+            
+            setLoading('register', true);
+            spawnFlyingPigeon();
+            
+            try {
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        username, 
+                        password, 
+                        dateOfBirth 
+                    })
+                });
+                
+                setLoading('register', false);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        // Success - redirect to chat
+                        window.location.href = '/chat';
+                        return;
+                    } else {
+                        showError(data.error || 'Registration failed');
+                        addPigeonPoop();
+                    }
+                } else {
+                    // Handle non-200 responses
+                    let errorMessage = 'Registration failed';
+                    try {
+                        const errorData = await response.json();
+                        errorMessage = errorData.error || errorMessage;
+                    } catch (e) {
+                        // If JSON parsing fails, use default message
+                        errorMessage = `Server error (${response.status})`;
+                    }
+                    showError(errorMessage);
+                    addPigeonPoop();
+                }
+            } catch (error) {
+                setLoading('register', false);
+                console.error('Registration error:', error);
+                showError('Connection error. Please try again.');
+                addPigeonPoop();
+            }
+        });
+        
+        // Spawn flying pigeons periodically
+        setInterval(spawnFlyingPigeon, 3000);
+        
+        // Random coo sounds
+        setInterval(showCooSound, 8000);
+        
+        // Random pigeon poop
+        setInterval(addPigeonPoop, 12000);
+        
+        // Random breadcrumbs
+        setInterval(addBreadcrumb, 15000);
+        
+        // Easter egg: Type "coo" to spawn pigeons
+        let cooSequence = '';
+        document.addEventListener('keypress', (e) => {
+            cooSequence += e.key.toLowerCase();
+            if (cooSequence.includes('coo')) {
+                for (let i = 0; i < 5; i++) {
+                    setTimeout(() => spawnFlyingPigeon(), i * 200);
+                }
+                showCooSound();
+                cooSequence = '';
+            }
+            if (cooSequence.length > 10) {
+                cooSequence = cooSequence.slice(-10);
+            }
+        });
+        
+        // Click anywhere to make pigeon sounds
+        document.addEventListener('click', () => {
+            if (Math.random() > 0.7) {
+                showCooSound();
+            }
+        });
+        
+        // Initial spawn
+        setTimeout(spawnFlyingPigeon, 1000);
+    </script>
+</body>
+</html>
