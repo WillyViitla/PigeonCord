@@ -1,0 +1,1802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PigeonCord - Chat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=gg+sans:wght@400;500;600;700&display=swap');
+        
+        * {
+            font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        }
+        
+        body {
+            background: #36393f;
+            color: #dcddde;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .sidebar {
+            background: #2f3136;
+            width: 240px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            border-right: 1px solid #202225;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .server-info {
+            padding: 16px;
+            border-bottom: 1px solid #202225;
+            background: #36393f;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+        
+        .server-info:hover {
+            background: #34373c;
+        }
+        
+        .server-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            margin-right: 12px;
+            background: linear-gradient(45deg, #ff6b35, #ff8c42);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: white;
+            font-size: 18px;
+        }
+        
+        .server-name {
+            font-weight: 600;
+            color: #ffffff;
+        }
+        
+        .channels-header {
+            padding: 16px 8px 8px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: #8e9297;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+        
+        .channel-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 8px;
+        }
+        
+        .channel-item {
+            padding: 6px 8px;
+            margin: 1px 0;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+            display: flex;
+            align-items: center;
+            color: #8e9297;
+            font-weight: 500;
+            user-select: none;
+        }
+        
+        .channel-item:hover {
+            background: #34373c;
+            color: #dcddde;
+        }
+        
+        .channel-item.active {
+            background: #393c43;
+            color: #ffffff;
+        }
+        
+        .channel-item::before {
+            content: '#';
+            margin-right: 6px;
+            font-weight: 600;
+        }
+        
+        .user-list {
+            background: #2f3136;
+            width: 240px;
+            height: 100vh;
+            position: fixed;
+            right: 0;
+            top: 0;
+            border-left: 1px solid #202225;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .members-header {
+            padding: 16px 8px 8px 16px;
+            color: #8e9297;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+            border-bottom: 1px solid #202225;
+        }
+        
+        .role-section {
+            margin-top: 16px;
+        }
+        
+        .role-header {
+            padding: 0 16px 4px 16px;
+            color: #8e9297;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+        
+        .role-count {
+            margin-left: auto;
+        }
+        
+        .role-members {
+            padding: 0 8px;
+        }
+        
+        .user-item {
+            padding: 4px 8px;
+            margin: 1px 0;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+            display: flex;
+            align-items: center;
+            color: #8e9297;
+            font-weight: 500;
+            user-select: none;
+        }
+        
+        .user-item:hover {
+            background: #34373c;
+            color: #dcddde;
+        }
+        
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            margin-right: 12px;
+            position: relative;
+            background: #7289da;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: white;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+        
+        .user-status {
+            position: absolute;
+            bottom: -2px;
+            right: -2px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            border: 2px solid #2f3136;
+        }
+        
+        .status-online { background: #43b581; }
+        .status-offline { background: #747f8d; }
+        .status-idle { background: #faa61a; }
+        .status-dnd { background: #f04747; }
+        
+        .main-content {
+            margin-left: 240px;
+            margin-right: 240px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .chat-header {
+            background: #36393f;
+            padding: 12px 16px;
+            border-bottom: 1px solid #202225;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 1px 0 rgba(0,0,0,0.2);
+        }
+        
+        .chat-header-left {
+            display: flex;
+            align-items: center;
+        }
+        
+        .chat-header h2 {
+            margin: 0;
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        .chat-header::before {
+            content: '#';
+            margin-right: 8px;
+            color: #8e9297;
+            font-weight: 600;
+        }
+        
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .header-button {
+            background: none;
+            border: none;
+            color: #b9bbbe;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: all 0.15s ease;
+            font-size: 20px;
+        }
+        
+        .header-button:hover {
+            background: #40444b;
+            color: #dcddde;
+        }
+        
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            background: #36393f;
+        }
+        
+        .message {
+            margin-bottom: 16px;
+            display: flex;
+            align-items: flex-start;
+            position: relative;
+        }
+        
+        .message:hover .message-actions {
+            opacity: 1;
+        }
+        
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 16px;
+            background: #7289da;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: white;
+            flex-shrink: 0;
+            cursor: pointer;
+        }
+        
+        .message-content {
+            flex: 1;
+        }
+        
+        .message-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+        
+        .message-username {
+            font-weight: 600;
+            margin-right: 8px;
+            cursor: pointer;
+        }
+        
+        .message-time {
+            color: #72767d;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .message-text {
+            color: #dcddde;
+            line-height: 1.375;
+            word-wrap: break-word;
+        }
+        
+        .message-actions {
+            position: absolute;
+            top: -12px;
+            right: 16px;
+            background: #36393f;
+            border: 1px solid #202225;
+            border-radius: 4px;
+            padding: 4px;
+            opacity: 0;
+            transition: opacity 0.15s ease;
+        }
+        
+        .message-input-container {
+            padding: 16px;
+            background: #36393f;
+        }
+        
+        .message-input {
+            background: #40444b;
+            border: none;
+            border-radius: 24px;
+            padding: 11px 16px;
+            color: #dcddde;
+            width: 100%;
+            font-size: 15px;
+            outline: none;
+            resize: none;
+            max-height: 144px;
+            min-height: 44px;
+        }
+        
+        .message-input::placeholder {
+            color: #72767d;
+        }
+        
+        .typing-indicator {
+            padding: 8px 16px;
+            color: #72767d;
+            font-size: 13px;
+            font-style: italic;
+            background: #36393f;
+            border-top: 1px solid #202225;
+            min-height: 20px;
+        }
+        
+        .user-panel {
+            background: #292b2f;
+            padding: 8px;
+            border-top: 1px solid #202225;
+            display: flex;
+            align-items: center;
+        }
+        
+        .user-panel-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            margin-right: 8px;
+            background: #7289da;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: white;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .user-panel-info {
+            flex: 1;
+        }
+        
+        .user-panel-name {
+            font-weight: 600;
+            font-size: 14px;
+            color: #ffffff;
+        }
+        
+        .user-panel-status {
+            font-size: 12px;
+            color: #b9bbbe;
+        }
+        
+        .user-panel-controls {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .control-button {
+            background: none;
+            border: none;
+            color: #b9bbbe;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: all 0.15s ease;
+            font-size: 16px;
+        }
+        
+        .control-button:hover {
+            background: #40444b;
+            color: #dcddde;
+        }
+        
+        .mention {
+            background: rgba(114, 137, 218, 0.1);
+            color: #7289da;
+            padding: 0 2px;
+            border-radius: 3px;
+        }
+        
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background: #36393f;
+            border-radius: 8px;
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #ffffff;
+        }
+        
+        .close-button {
+            background: none;
+            border: none;
+            color: #b9bbbe;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: all 0.15s ease;
+        }
+        
+        .close-button:hover {
+            background: #40444b;
+            color: #dcddde;
+        }
+        
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #b9bbbe;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+        
+        .form-input {
+            background: #40444b;
+            border: none;
+            border-radius: 4px;
+            padding: 10px;
+            color: #dcddde;
+            width: 100%;
+            font-size: 15px;
+            outline: none;
+        }
+        
+        .form-textarea {
+            background: #40444b;
+            border: none;
+            border-radius: 4px;
+            padding: 10px;
+            color: #dcddde;
+            width: 100%;
+            font-size: 15px;
+            outline: none;
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .form-select {
+            background: #40444b;
+            border: none;
+            border-radius: 4px;
+            padding: 10px;
+            color: #dcddde;
+            width: 100%;
+            font-size: 15px;
+            outline: none;
+        }
+        
+        .button {
+            background: #7289da;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            padding: 8px 16px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        
+        .button:hover {
+            background: #5b6eae;
+        }
+        
+        .button-danger {
+            background: #f04747;
+        }
+        
+        .button-danger:hover {
+            background: #c93c3c;
+        }
+        
+        .button-success {
+            background: #43b581;
+        }
+        
+        .button-success:hover {
+            background: #369268;
+        }
+        
+        .user-profile {
+            background: #2f3136;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        
+        .profile-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        
+        .profile-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin-right: 16px;
+            background: #7289da;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: white;
+            font-size: 32px;
+            position: relative;
+        }
+        
+        .profile-info {
+            flex: 1;
+        }
+        
+        .profile-username {
+            font-size: 20px;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 4px;
+        }
+        
+        .profile-role {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+        
+        .profile-status {
+            font-size: 12px;
+            color: #b9bbbe;
+        }
+        
+        .profile-section {
+            margin-bottom: 16px;
+        }
+        
+        .profile-section h3 {
+            font-size: 12px;
+            font-weight: 600;
+            color: #b9bbbe;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        
+        .profile-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+        }
+        
+        .admin-panel {
+            background: #2f3136;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        
+        .admin-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+        }
+        
+        .settings-section {
+            margin-bottom: 24px;
+        }
+        
+        .settings-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 8px;
+        }
+        
+        .settings-description {
+            color: #b9bbbe;
+            margin-bottom: 16px;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .file-input-label {
+            background: #7289da;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            display: inline-block;
+            transition: background 0.15s ease;
+        }
+        
+        .file-input-label:hover {
+            background: #5b6eae;
+        }
+        
+        .status-selector {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        
+        .status-option {
+            padding: 8px 12px;
+            border: 2px solid #40444b;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            background: #40444b;
+            color: #dcddde;
+        }
+        
+        .status-option.active {
+            border-color: #7289da;
+            background: rgba(114, 137, 218, 0.1);
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        .emoji {
+            font-size: 18px;
+            margin-right: 8px;
+        }
+        
+        .pigeon-crown {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            width: 16px;
+            height: 16px;
+            background: #ffd700;
+            border-radius: 50%;
+            border: 2px solid #2f3136;
+        }
+        
+        .pigeon-crown::before {
+            content: '';
+            position: absolute;
+            top: -3px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 3px solid transparent;
+            border-right: 3px solid transparent;
+            border-bottom: 5px solid #ffd700;
+        }
+        
+        .role-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 4px;
+        }
+        
+        .notification-dot {
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            width: 8px;
+            height: 8px;
+            background: #f04747;
+            border-radius: 50%;
+            border: 2px solid #2f3136;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #40444b;
+            border-radius: 50%;
+            border-top-color: #7289da;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .pigeon-flying {
+            animation: fly 2s ease-in-out infinite;
+        }
+        
+        @keyframes fly {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-5px); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Left Sidebar -->
+    <div class="sidebar">
+        <div class="server-info" onclick="showServerInfo()">
+            <div class="server-icon">
+					<img src="logo.png" alt="PigeonCord Logo">
+			️</div>
+            <div>
+                <div class="server-name">PigeonCord</div>
+                <div style="font-size: 12px; color: #b9bbbe;">Coo coo, bestie!</div>
+            </div>
+        </div>
+        
+        <div class="channels-header">
+            <span>Text Channels</span>
+            <button class="header-button" onclick="showChannelSettings()" title="Channel Settings">⚙️</button>
+        </div>
+        
+        <div class="channel-list">
+            <div class="channel-item active" data-channel="1" onclick="switchChannel(1)">general</div>
+            <div class="channel-item" data-channel="2" onclick="switchChannel(2)">memes</div>
+            <div class="channel-item" data-channel="3" onclick="switchChannel(3)">announcements</div>
+            <div class="channel-item" data-channel="4" onclick="switchChannel(4)">random</div>
+        </div>
+        
+        <div class="user-panel">
+            <div class="user-panel-avatar" onclick="showMyProfile()">
+                <img id="myAvatar" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" src="" alt="" onerror="this.style.display='none';">
+                <span id="myAvatarText">P</span>
+                <div class="user-status status-online" id="myStatus"></div>
+            </div>
+            <div class="user-panel-info">
+                <div class="user-panel-name" id="myUsername">Loading...</div>
+                <div class="user-panel-status" id="myStatusText">Online</div>
+            </div>
+            <div class="user-panel-controls">
+                <button class="control-button" onclick="showSettings()" title="Settings">⚙️</button>
+                <button class="control-button" onclick="logout()" title="Logout">🚪</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="chat-header">
+            <div class="chat-header-left">
+                <h2 id="currentChannel">general</h2>
+                <div style="margin-left: 8px; color: #8e9297; font-size: 14px;">General chat for all the cool pigeons</div>
+            </div>
+            <div class="header-controls">
+                <button class="header-button" onclick="showMemberList()" title="Member List">👥</button>
+                <button class="header-button" onclick="showChannelInfo()" title="Channel Info">ℹ️</button>
+                <button class="header-button" onclick="showAdminPanel()" title="Admin Panel" id="adminBtn" style="display: none;">👑</button>
+            </div>
+        </div>
+        
+        <div class="messages-container" id="messagesContainer">
+            <!-- Messages will be populated here -->
+        </div>
+        
+        <div class="typing-indicator" id="typingIndicator"></div>
+        
+        <div class="message-input-container">
+            <textarea 
+                class="message-input" 
+                id="messageInput" 
+                placeholder="Type your message here, bestie..."
+                rows="1"
+                onkeypress="handleKeyPress(event)"
+                oninput="handleTyping()"
+            ></textarea>
+        </div>
+    </div>
+    
+    <!-- Right Sidebar -->
+    <div class="user-list">
+        <div class="members-header">
+            <span>Members — <span id="memberCount">0</span></span>
+        </div>
+        
+        <div id="membersList">
+            <!-- Members will be populated here -->
+        </div>
+    </div>
+    
+    <!-- User Profile Modal -->
+    <div id="userProfileModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">User Profile</h2>
+                <button class="close-button" onclick="closeModal('userProfileModal')">×</button>
+            </div>
+            
+            <div class="user-profile">
+                <div class="profile-header">
+                    <div class="profile-avatar" id="profileAvatar">
+                        <img id="profileAvatarImg" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" src="" alt="" onerror="this.style.display='none';">
+                        <span id="profileAvatarText">P</span>
+                        <div class="user-status" id="profileStatus"></div>
+                    </div>
+                    <div class="profile-info">
+                        <div class="profile-username" id="profileUsername">Username</div>
+                        <div class="profile-role" id="profileRole">Member</div>
+                        <div class="profile-status" id="profileStatusText">Online</div>
+                    </div>
+                </div>
+                
+                <div class="profile-section">
+                    <h3>About</h3>
+                    <div id="profileBio">No bio set</div>
+                </div>
+                
+                <div class="profile-section">
+                    <h3>Member Since</h3>
+                    <div id="profileJoinDate">Unknown</div>
+                </div>
+                
+                <div class="profile-actions">
+                    <button class="button" onclick="sendDirectMessage()">Send Message</button>
+                    <button class="button button-danger" onclick="blockUser()" style="display: none;" id="blockBtn">Block</button>
+                </div>
+            </div>
+            
+            <div class="admin-panel" id="adminProfilePanel" style="display: none;">
+                <h3>Admin Actions</h3>
+                <div class="form-group">
+                    <label class="form-label">Change Role</label>
+                    <select class="form-select" id="roleSelect">
+                        <option value="1">Member</option>
+                        <option value="2">Moderator</option>
+                        <option value="3">Admin</option>
+                        <option value="4">Owner</option>
+                    </select>
+                </div>
+                <div class="admin-actions">
+                    <button class="button button-success" onclick="changeUserRole()">Change Role</button>
+                    <button class="button button-danger" onclick="kickUser()">Kick</button>
+                    <button class="button button-danger" onclick="banUser()">Ban</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Settings</h2>
+                <button class="close-button" onclick="closeModal('settingsModal')">×</button>
+            </div>
+            
+            <div class="settings-section">
+                <div class="settings-title">Profile</div>
+                <div class="settings-description">Change your avatar and bio</div>
+                
+                <div class="form-group">
+                    <label class="form-label">Avatar</label>
+                    <input type="file" id="avatarInput" class="file-input" accept="image/*" onchange="uploadAvatar()">
+                    <label for="avatarInput" class="file-input-label">Choose Avatar</label>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Bio</label>
+                    <textarea class="form-textarea" id="bioInput" placeholder="Tell everyone about yourself..."></textarea>
+                </div>
+                
+                <button class="button button-success" onclick="saveProfile()">Save Profile</button>
+            </div>
+            
+            <div class="settings-section">
+                <div class="settings-title">Status</div>
+                <div class="settings-description">Set your online status</div>
+                
+                <div class="status-selector">
+                    <div class="status-option active" data-status="online" onclick="setStatus('online')">
+                        <span class="emoji">🟢</span>Online
+                    </div>
+                    <div class="status-option" data-status="idle" onclick="setStatus('idle')">
+                        <span class="emoji">🟡</span>Idle
+                    </div>
+                    <div class="status-option" data-status="dnd" onclick="setStatus('dnd')">
+                        <span class="emoji">🔴</span>Do Not Disturb
+                    </div>
+                    <div class="status-option" data-status="offline" onclick="setStatus('offline')">
+                        <span class="emoji">⚫</span>Invisible
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Admin Panel Modal -->
+    <div id="adminModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Admin Panel</h2>
+                <button class="close-button" onclick="closeModal('adminModal')">×</button>
+            </div>
+            
+            <div class="settings-section">
+                <div class="settings-title">Server Management</div>
+                <div class="settings-description">Manage server settings and moderation</div>
+                
+                <div class="form-group">
+                    <label class="form-label">Server Name</label>
+                    <input type="text" class="form-input" id="serverName" value="PigeonCord">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Server Description</label>
+                    <textarea class="form-textarea" id="serverDescription" placeholder="Server description...">Welcome to PigeonCord! The cooziest place on the internet for pigeons and their friends.</textarea>
+                </div>
+                
+                <button class="button button-success" onclick="saveServerSettings()">Save Settings</button>
+            </div>
+            
+            <div class="settings-section">
+                <div class="settings-title">User Management</div>
+                <div class="settings-description">View and manage all users</div>
+                
+                <div id="userManagementList">
+                    <!-- Users will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Channel Settings Modal -->
+    <div id="channelModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Channel Settings</h2>
+                <button class="close-button" onclick="closeModal('channelModal')">×</button>
+            </div>
+            
+            <div class="settings-section">
+                <div class="settings-title">Create New Channel</div>
+                <div class="settings-description">Add a new text channel</div>
+                
+                <div class="form-group">
+                    <label class="form-label">Channel Name</label>
+                    <input type="text" class="form-input" id="newChannelName" placeholder="channel-name">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Channel Description</label>
+                    <textarea class="form-textarea" id="newChannelDescription" placeholder="What's this channel about?"></textarea>
+                </div>
+                
+                <button class="button button-success" onclick="createChannel()">Create Channel</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Server Info Modal -->
+    <div id="serverModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Server Info</h2>
+                <button class="close-button" onclick="closeModal('serverModal')">×</button>
+            </div>
+            
+            <div class="user-profile">
+                <div class="profile-header">
+                    <div class="profile-avatar">
+                        🕊️
+                    </div>
+                    <div class="profile-info">
+                        <div class="profile-username">PigeonCord</div>
+                        <div class="profile-role">Community Server</div>
+                        <div class="profile-status">Online since 2024</div>
+                    </div>
+                </div>
+                
+                <div class="profile-section">
+                    <h3>About</h3>
+                    <div>Welcome to PigeonCord! The cooziest place on the internet for pigeons and their friends. Share memes, chat about life, and spread those good vibes! 🕊️</div>
+                </div>
+                
+                <div class="profile-section">
+                    <h3>Server Stats</h3>
+                    <div>
+                        <p>👥 Members: <span id="serverMemberCount">0</span></p>
+                        <p>💬 Channels: <span id="serverChannelCount">4</span></p>
+                        <p>📅 Created: January 2024</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let socket;
+        let currentUser = null;
+        let currentChannel = 1;
+        let typingTimeout;
+        let isTyping = false;
+        let users = [];
+        let channels = [];
+        let messages = [];
+        
+        // Initialize the application
+        async function init() {
+            try {
+                // Get current user info
+                const userResponse = await fetch('/api/user');
+                if (!userResponse.ok) {
+                    window.location.href = '/';
+                    return;
+                }
+                currentUser = await userResponse.json();
+                
+                // Initialize socket connection
+                socket = io();
+                socket.emit('join', currentUser);
+                
+                // Setup socket event listeners
+                setupSocketListeners();
+                
+                // Load initial data
+                await loadUsers();
+                await loadChannels();
+                await loadMessages(currentChannel);
+                
+                // Update UI
+                updateUserInfo();
+                updateMembersList();
+                
+                // Auto-resize message input
+                setupMessageInput();
+                
+                console.log('PigeonCord initialized successfully! 🕊️');
+            } catch (error) {
+                console.error('Failed to initialize PigeonCord:', error);
+                window.location.href = '/';
+            }
+        }
+        
+        // Setup socket event listeners
+        function setupSocketListeners() {
+            socket.on('new_message', (message) => {
+                addMessage(message);
+            });
+            
+            socket.on('user_status_changed', (data) => {
+                updateUserStatus(data.userId, data.status);
+            });
+            
+            socket.on('user_typing', (data) => {
+                if (data.channelId === currentChannel) {
+                    showTypingIndicator(data.username);
+                }
+            });
+            
+            socket.on('user_stop_typing', (data) => {
+                if (data.channelId === currentChannel) {
+                    hideTypingIndicator();
+                }
+            });
+        }
+        
+        // Load users from server
+        async function loadUsers() {
+            try {
+                const response = await fetch('/api/users');
+                users = await response.json();
+            } catch (error) {
+                console.error('Failed to load users:', error);
+            }
+        }
+        
+        // Load channels from server
+        async function loadChannels() {
+            try {
+                const response = await fetch('/api/channels');
+                channels = await response.json();
+            } catch (error) {
+                console.error('Failed to load channels:', error);
+            }
+        }
+        
+        // Load messages for a channel
+        async function loadMessages(channelId) {
+            try {
+                const response = await fetch(`/api/messages/${channelId}`);
+                messages = await response.json();
+                displayMessages();
+            } catch (error) {
+                console.error('Failed to load messages:', error);
+            }
+        }
+        
+        // Display messages in the chat
+        function displayMessages() {
+            const container = document.getElementById('messagesContainer');
+            container.innerHTML = '';
+            
+            messages.forEach(message => {
+                addMessage(message, false);
+            });
+            
+            scrollToBottom();
+        }
+        
+        // Add a new message to the chat
+        function addMessage(message, scroll = true) {
+            const container = document.getElementById('messagesContainer');
+            const messageElement = createMessageElement(message);
+            container.appendChild(messageElement);
+            
+            if (scroll) {
+                scrollToBottom();
+            }
+        }
+        
+        // Create message element
+        function createMessageElement(message) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message';
+            messageDiv.dataset.messageId = message.id;
+            
+            const avatarDiv = document.createElement('div');
+            avatarDiv.className = 'message-avatar';
+            avatarDiv.style.backgroundColor = message.role_color;
+            avatarDiv.onclick = () => showUserProfile(message.user_id);
+            
+            if (message.avatar) {
+                const avatarImg = document.createElement('img');
+                avatarImg.src = message.avatar;
+                avatarImg.style.width = '100%';
+                avatarImg.style.height = '100%';
+                avatarImg.style.borderRadius = '50%';
+                avatarImg.style.objectFit = 'cover';
+                avatarImg.onerror = () => {
+                    avatarImg.style.display = 'none';
+                    avatarDiv.textContent = message.username.charAt(0).toUpperCase();
+                };
+                avatarDiv.appendChild(avatarImg);
+            } else {
+                avatarDiv.textContent = message.username.charAt(0).toUpperCase();
+            }
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            
+            const headerDiv = document.createElement('div');
+            headerDiv.className = 'message-header';
+            
+            const usernameSpan = document.createElement('span');
+            usernameSpan.className = 'message-username';
+            usernameSpan.style.color = message.role_color;
+            usernameSpan.textContent = message.username;
+            usernameSpan.onclick = () => showUserProfile(message.user_id);
+            
+            if (message.role_name !== 'Member') {
+                const roleBadge = document.createElement('span');
+                roleBadge.className = 'role-badge';
+                roleBadge.style.backgroundColor = message.role_color;
+                roleBadge.textContent = message.role_name;
+                usernameSpan.appendChild(roleBadge);
+            }
+            
+            const timeSpan = document.createElement('span');
+            timeSpan.className = 'message-time';
+            timeSpan.textContent = formatTime(message.created_at);
+            
+            const textDiv = document.createElement('div');
+            textDiv.className = 'message-text';
+            textDiv.innerHTML = formatMessageContent(message.content);
+            
+            headerDiv.appendChild(usernameSpan);
+            headerDiv.appendChild(timeSpan);
+            contentDiv.appendChild(headerDiv);
+            contentDiv.appendChild(textDiv);
+            
+            messageDiv.appendChild(avatarDiv);
+            messageDiv.appendChild(contentDiv);
+            
+            return messageDiv;
+        }
+        
+        // Format message content (mentions, emojis, etc.)
+        function formatMessageContent(content) {
+            // Convert mentions
+            content = content.replace(/@(\w+)/g, '<span class="mention">@$1</span>');
+            
+            // Convert URLs to links
+            content = content.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color: #7289da;">$1</a>');
+            
+            // Convert line breaks
+            content = content.replace(/\n/g, '<br>');
+            
+            return content;
+        }
+        
+        // Format timestamp
+        function formatTime(timestamp) {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diffInMs = now - date;
+            const diffInMinutes = Math.floor(diffInMs / 60000);
+            const diffInHours = Math.floor(diffInMinutes / 60);
+            const diffInDays = Math.floor(diffInHours / 24);
+            
+            if (diffInMinutes < 1) {
+                return 'just now';
+            } else if (diffInMinutes < 60) {
+                return `${diffInMinutes}m ago`;
+            } else if (diffInHours < 24) {
+                return `${diffInHours}h ago`;
+            } else if (diffInDays < 7) {
+                return `${diffInDays}d ago`;
+            } else {
+                return date.toLocaleDateString();
+            }
+        }
+        
+        // Update user info in the UI
+        function updateUserInfo() {
+            document.getElementById('myUsername').textContent = currentUser.username;
+            document.getElementById('myAvatarText').textContent = currentUser.username.charAt(0).toUpperCase();
+            
+            if (currentUser.avatar) {
+                document.getElementById('myAvatar').src = currentUser.avatar;
+                document.getElementById('myAvatar').style.display = 'block';
+            }
+            
+            // Show admin button if user has admin permissions
+            const permissions = JSON.parse(currentUser.permissions || '{}');
+            if (permissions.manage_server || permissions.manage_roles) {
+                document.getElementById('adminBtn').style.display = 'block';
+            }
+        }
+        
+        // Update members list
+        function updateMembersList() {
+            const membersList = document.getElementById('membersList');
+            const memberCount = document.getElementById('memberCount');
+            
+            membersList.innerHTML = '';
+            
+            // Group users by role
+            const roleGroups = {};
+            users.forEach(user => {
+                if (!roleGroups[user.role_name]) {
+                    roleGroups[user.role_name] = [];
+                }
+                roleGroups[user.role_name].push(user);
+            });
+            
+            // Display each role group
+            Object.keys(roleGroups).forEach(roleName => {
+                const roleDiv = document.createElement('div');
+                roleDiv.className = 'role-section';
+                
+                const roleHeader = document.createElement('div');
+                roleHeader.className = 'role-header';
+                roleHeader.innerHTML = `
+                    <span>${roleName}</span>
+                    <span class="role-count">${roleGroups[roleName].length}</span>
+                `;
+                
+                const roleMembers = document.createElement('div');
+                roleMembers.className = 'role-members';
+                
+                roleGroups[roleName].forEach(user => {
+                    const userDiv = document.createElement('div');
+                    userDiv.className = 'user-item';
+                    userDiv.onclick = () => showUserProfile(user.id);
+                    
+                    const avatar = document.createElement('div');
+                    avatar.className = 'user-avatar';
+                    avatar.style.backgroundColor = user.role_color;
+                    
+                    if (user.avatar) {
+                        const avatarImg = document.createElement('img');
+                        avatarImg.src = user.avatar;
+                        avatarImg.style.width = '100%';
+                        avatarImg.style.height = '100%';
+                        avatarImg.style.borderRadius = '50%';
+                        avatarImg.style.objectFit = 'cover';
+                        avatarImg.onerror = () => {
+                            avatarImg.style.display = 'none';
+                            avatar.textContent = user.username.charAt(0).toUpperCase();
+                        };
+                        avatar.appendChild(avatarImg);
+                    } else {
+                        avatar.textContent = user.username.charAt(0).toUpperCase();
+                    }
+                    
+                    const statusDiv = document.createElement('div');
+                    statusDiv.className = `user-status status-${user.status}`;
+                    avatar.appendChild(statusDiv);
+                    
+                    const nameDiv = document.createElement('div');
+                    nameDiv.textContent = user.username;
+                    
+                    userDiv.appendChild(avatar);
+                    userDiv.appendChild(nameDiv);
+                    roleMembers.appendChild(userDiv);
+                });
+                
+                roleDiv.appendChild(roleHeader);
+                roleDiv.appendChild(roleMembers);
+                membersList.appendChild(roleDiv);
+            });
+            
+            memberCount.textContent = users.length;
+            document.getElementById('serverMemberCount').textContent = users.length;
+        }
+        
+        // Switch to different channel
+        function switchChannel(channelId) {
+            currentChannel = channelId;
+            
+            // Update active channel in UI
+            document.querySelectorAll('.channel-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            document.querySelector(`[data-channel="${channelId}"]`).classList.add('active');
+            
+            // Update channel name
+            const channel = channels.find(c => c.id === channelId);
+            if (channel) {
+                document.getElementById('currentChannel').textContent = channel.name;
+            }
+            
+            // Load messages for the new channel
+            loadMessages(channelId);
+        }
+        
+        // Handle key press in message input
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+        
+        // Handle typing indicator
+        function handleTyping() {
+            if (!isTyping) {
+                isTyping = true;
+                socket.emit('typing', { channelId: currentChannel });
+            }
+            
+            clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => {
+                isTyping = false;
+                socket.emit('stop_typing', { channelId: currentChannel });
+            }, 1000);
+        }
+        
+        // Send message
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const content = input.value.trim();
+            
+            if (!content) return;
+            
+            // Find mentions
+            const mentions = [];
+            const mentionRegex = /@(\w+)/g;
+            let match;
+            while ((match = mentionRegex.exec(content)) !== null) {
+                const mentionedUser = users.find(u => u.username === match[1]);
+                if (mentionedUser) {
+                    mentions.push(mentionedUser.id);
+                }
+            }
+            
+            socket.emit('send_message', {
+                channelId: currentChannel,
+                content: content,
+                mentions: mentions
+            });
+            
+            input.value = '';
+            input.style.height = '44px';
+            
+            if (isTyping) {
+                isTyping = false;
+                socket.emit('stop_typing', { channelId: currentChannel });
+            }
+        }
+        
+        // Show typing indicator
+        function showTypingIndicator(username) {
+            const indicator = document.getElementById('typingIndicator');
+            indicator.textContent = `${username} is typing...`;
+        }
+        
+        // Hide typing indicator
+        function hideTypingIndicator() {
+            const indicator = document.getElementById('typingIndicator');
+            indicator.textContent = '';
+        }
+        
+        // Setup message input auto-resize
+        function setupMessageInput() {
+            const input = document.getElementById('messageInput');
+            input.addEventListener('input', function() {
+                this.style.height = '44px';
+                this.style.height = Math.min(this.scrollHeight, 144) + 'px';
+            });
+        }
+        
+        // Scroll to bottom of messages
+        function scrollToBottom() {
+            const container = document.getElementById('messagesContainer');
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        // Update user status
+        function updateUserStatus(userId, status) {
+            users.forEach(user => {
+                if (user.id === userId) {
+                    user.status = status;
+                }
+            });
+            updateMembersList();
+        }
+        
+        // Show user profile modal
+        async function showUserProfile(userId) {
+            try {
+                const response = await fetch(`/api/user/${userId}`);
+                const user = await response.json();
+                
+                // Populate profile modal
+                document.getElementById('profileUsername').textContent = user.username;
+                document.getElementById('profileRole').textContent = user.role_name;
+                document.getElementById('profileRole').style.color = user.role_color;
+                document.getElementById('profileStatusText').textContent = user.status;
+                document.getElementById('profileStatus').className = `user-status status-${user.status}`;
+                document.getElementById('profileBio').textContent = user.bio || 'No bio set';
+                document.getElementById('profileJoinDate').textContent = new Date(user.created_at).toLocaleDateString();
+                
+                // Avatar
+                document.getElementById('profileAvatarText').textContent = user.username.charAt(0).toUpperCase();
+                document.getElementById('profileAvatar').style.backgroundColor = user.role_color;
+                
+                if (user.avatar) {
+                    document.getElementById('profileAvatarImg').src = user.avatar;
+                    document.getElementById('profileAvatarImg').style.display = 'block';
+                } else {
+                    document.getElementById('profileAvatarImg').style.display = 'none';
+                }
+                
+                // Show admin panel if current user has permissions
+                const permissions = JSON.parse(currentUser.permissions || '{}');
+                if (permissions.manage_roles && userId !== currentUser.id) {
+                    document.getElementById('adminProfilePanel').style.display = 'block';
+                    document.getElementById('roleSelect').value = user.role_id;
+                } else {
+                    document.getElementById('adminProfilePanel').style.display = 'none';
+                }
+                
+                // Store current profile user ID
+                window.currentProfileUserId = userId;
+                
+                showModal('userProfileModal');
+            } catch (error) {
+                console.error('Failed to load user profile:', error);
+            }
+        }
+        
+        // Show my profile
+        function showMyProfile() {
+            showUserProfile(currentUser.id);
+        }
+        
+        // Show settings modal
+        function showSettings() {
+            document.getElementById('bioInput').value = currentUser.bio || '';
+            showModal('settingsModal');
+        }
+        
+        // Show admin panel
+        function showAdminPanel() {
+            loadUserManagement();
+            showModal('adminModal');
+        }
+        
+        // Show channel settings
+        function showChannelSettings() {
+            showModal('channelModal');
+        }
+        
+        // Show server info
+        function showServerInfo() {
+            showModal('serverModal');
+        }
+        
+        // Show modal
+        function showModal(modalId) {
+            document.getElementById(modalId).classList.remove('hidden');
+        }
+        
+        // Close modal
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+        
+        // Save profile
+        async function saveProfile() {
+            const formData = new FormData();
+            formData.append('bio', document.getElementById('bioInput').value);
+            
+            const avatarFile = document.getElementById('avatarInput').files[0];
+            if (avatarFile) {
+                formData.append('avatar', avatarFile);
+            }
+            
+            try {
+                const response = await fetch('/api/profile/update', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    alert('Profile updated successfully!');
+                    closeModal('settingsModal');
+                    // Refresh user data
+                    const userResponse = await fetch('/api/user');
+                    currentUser = await userResponse.json();
+                    updateUserInfo();
+                } else {
+                    alert('Failed to update profile');
+                }
+            } catch (error) {
+                console.error('Error updating profile:', error);
+                alert('Failed to update profile');
+            }
+        }
+        
+        // Set status
+        function setStatus(status) {
+            // Update UI
+            document.querySelectorAll('.status-option').forEach(option => {
+                option.classList.remove('active');
+            });
+            document.querySelector(`[data-status="${status}"]`).classList.add('active');
+            
+            // Update status text
+            const statusTexts = {
+                'online': 'Online',
+                'idle': 'Idle',
+                'dnd': 'Do Not Disturb',
+                'offline': 'Invisible'
+            };
+            document.getElementById('myStatusText').textContent = statusTexts[status];
+            document.getElementById('myStatus').className = `user-status status-${status}`;
+            
+            // TODO: Send status update to server
+        }
+        
+        // Load user management
+        function loadUserManagement() {
+            const container = document.getElementById('userManagementList');
+            container.innerHTML = '';
+            
+            users.forEach(user => {
+                const userDiv = document.createElement('div');
+                userDiv.className = 'user-item';
+                userDiv.innerHTML = `
+                    <div class="user-avatar" style="background-color: ${user.role_color};">
+                        ${user.avatar ? `<img src="${user.avatar}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">` : user.username.charAt(0).toUpperCase()}
+                    </div>
+                    <div style="flex: 1;">
+                        <div>${user.username}</div>
+                        <div style="font-size: 12px; color: #8e9297;">${user.role_name}</div>
+                    </div>
+                    <button class="button" onclick="showUserProfile(${user.id})">Manage</button>
+                `;
+                container.appendChild(userDiv);
+            });
+        }
+        
+        // Change user role
+        async function changeUserRole() {
+            const roleId = document.getElementById('roleSelect').value;
+            const userId = window.currentProfileUserId;
+            
+            try {
+                const response = await fetch('/api/admin/role/update', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ userId, roleId })
+                });
+                
+                if (response.ok) {
+                    alert('Role updated successfully!');
+                    await loadUsers();
+                    updateMembersList();
+                    closeModal('userProfileModal');
+                } else {
+                    alert('Failed to update role');
+                }
+            } catch (error) {
+                console.error('Error updating role:', error);
+                alert('Failed to update role');
+            }
+        }
+        
+        // Logout
+        async function logout() {
+            try {
+                await fetch('/api/logout', { method: 'POST' });
+                window.location.href = '/';
+            } catch (error) {
+                console.error('Logout failed:', error);
+                window.location.href = '/';
+            }
+        }
+        
+        // Initialize when page loads
+        window.addEventListener('load', init);
+        
+        // Close modals when clicking outside
+        window.addEventListener('click', (event) => {
+            if (event.target.classList.contains('modal')) {
+                event.target.classList.add('hidden');
+            }
+        });
+        
+        // Placeholder functions for features not yet implemented
+        function showMemberList() {
+            // Member list is already visible
+        }
+        
+        function showChannelInfo() {
+            alert('Channel info feature coming soon! 🕊️');
+        }
+        
+        function sendDirectMessage() {
+            alert('DM feature coming soon! 🕊️');
+        }
+        
+        function blockUser() {
+            alert('Block feature coming soon! 🕊️');
+        }
+        
+        function kickUser() {
+            alert('Kick feature coming soon! 🕊️');
+        }
+        
+        function banUser() {
+            alert('Ban feature coming soon! 🕊️');
+        }
+        
+        function uploadAvatar() {
+            const file = document.getElementById('avatarInput').files[0];
+            if (file) {
+                // Preview avatar
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('myAvatar').src = e.target.result;
+                    document.getElementById('myAvatar').style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+        
+        function saveServerSettings() {
+            alert('Server settings saved! 🕊️');
+            closeModal('adminModal');
+        }
+        
+        function createChannel() {
+            const name = document.getElementById('newChannelName').value;
+            const description = document.getElementById('newChannelDescription').value;
+            
+            if (!name) {
+                alert('Please enter a channel name');
+                return;
+            }
+            
+            alert('Channel creation feature coming soon! 🕊️');
+            closeModal('channelModal');
+        }
+        
+        // Easter egg: Konami code
+        let konamiCode = [];
+        const konamiSequence = [38, 38, 40, 40, 37, 39, 37, 39, 66, 65];
+        
+        document.addEventListener('keydown', function(e) {
+            konamiCode.push(e.keyCode);
+            if (konamiCode.length > konamiSequence.length) {
+                konamiCode.shift();
+            }
+            
+            if (konamiCode.join(',') === konamiSequence.join(',')) {
+                document.querySelector('.server-icon').classList.add('pigeon-flying');
+                setTimeout(() => {
+                    document.querySelector('.server-icon').classList.remove('pigeon-flying');
+                }, 2000);
+                
+                // Send a special message
+                socket.emit('send_message', {
+                    channelId: currentChannel,
+                    content: '🕊️ *A wild pigeon appears and does a little dance* 🕊️',
+                    mentions: []
+                });
+            }
+        });
+    </script>
+</body>
+</html>
